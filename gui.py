@@ -10,7 +10,7 @@ def search():
 
 def mouseClick(e):
     for p in getAllPapers():
-        if (e.x>p.x and e.x<p.x+50 and e.y>p.y and e.y<p.y+50):
+        if (e.x>p.x and e.x<p.x+32 and e.y>p.y and e.y<p.y+32):
             print("Ho cliccato su", p.title)
             cited=sch.citedby(p.dict)
             for i in range(5):
@@ -22,7 +22,7 @@ def mouseClick(e):
 def drawPapers():
     for p in getAllPapers():
         cs.create_oval(p.x,p.y,p.x+32,p.y+32)
-        cs.create_text(p.x+16,p.y+42,text=p.title,font="Tahoma 12")
+        cs.create_text(p.x+16,p.y+42,text=p.title,font="Tahoma 9")
         for tag, c in p.cites:
             cs.create_line(p.x+32, p.y+16, c.x, c.y+16, arrow=tk.LAST)
     
