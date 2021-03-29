@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
-#from scholarly import scholarly as sch
+from scholarly import scholarly as sch
 #from scholarly import ProxyGenerator
 #from fp.fp import FreeProxy
-import fakescholarly as sch
+#import fakescholarly as sch
 import grafocitazioni as gc
 #import re
 
