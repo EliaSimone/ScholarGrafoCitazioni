@@ -1,13 +1,16 @@
+import pickle
 import random
 import math
 
 #dizionario che ha associato a ogni titolo un paper
 _papers={}
-_perYear={}
+#_perYear={}
 _minX=None
 _maxX=None
 _minYear=None
 _maxYear=None
+
+Y_HEIGHT=600
 
 class Paper:
     """crea un paper da un dizionario formato scholarly"""
@@ -18,13 +21,17 @@ class Paper:
 
     def __init__(self, paperDict):
         self.dict=paperDict
-        self.title=paperDict['bib']['title']
-        self.year=int(paperDict['bib']['pub_year'])
+        self.title=paperDict['title']
+        self.year=int(paperDict['pub_year'])
         self.cites={}
-        
+        self.draw=True
+
+        if self.title in _papers:
+            return
         _papers[self.title]=self
 
         self._x=(self.year-1900)*Paper.XSEP
+        """
         l=_perYear.get(self.year)
         if l:
             self._y=len(l)*Paper.YSEP
@@ -32,8 +39,8 @@ class Paper:
         else:
             _perYear[self.year]=[self]
             self._y=0
-
-        self._y=random.uniform(0,500)
+        """
+        self._y=random.uniform(0,Y_HEIGHT)
 
         global _minX
         global _maxX
@@ -55,8 +62,8 @@ class Paper:
     @staticmethod
     def createUnique(paperDict):
         """Crea il paper se non è già presente altrimenti ritorna quello già presente"""
-        title=paperDict['bib']['title']
-        if not exists(title):
+        title=paperDict['title']
+        if title not in _papers:
             return Paper(paperDict)
         return _papers[title]
 
@@ -113,6 +120,8 @@ class Citation:
         self.paper1=paper1
         self.paper2=paper2
         self.tag=tag
+        self.color='black'
+        self.draw=True
         if paper2.year>paper1.year:
             self.right=True
         else:
@@ -144,10 +153,12 @@ class Citation:
             return 90
         
         a=math.atan((self.y2-self.y1)/(self.x2-self.x1))
-        return -a*180/math.pi
+        return math.degrees(-a)
 
     def checkPoint(self, x, y, stroke=5):
-        if x<self.x1 != x<self.x2:
+        if (x<self.x1) == (x<self.x2):
+            return False
+        if (y<self.y1) == (y<self.y2):
             return False
         #proiezione sulla linea
         yy=self.y1+(x-self.x1)*(self.y2-self.y1)/(self.x2-self.x1)
@@ -169,3 +180,15 @@ def clearPapers():
     for i,p in _papers:
         p.clearCites()
     _papers.clear()
+
+def save(filename):
+    pickle.dump((_papers,_minX,_maxX,_minYear,_maxYear), filename)
+
+def load(filename):
+    global _papers, _minX, _maxX, _minYear, _maxYear
+    load=pickle.load(filename)
+    _papers=load[0]
+    _minX=load[1]
+    _maxX=load[2]
+    _minYear=load[3]
+    _maxYear=load[4]
