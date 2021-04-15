@@ -356,7 +356,6 @@ ttk.Button(filtrFrame, text='Aggiungi', command=listAdd).grid(column=2, row=4, p
 ttk.Button(filtrFrame, text='Applica', command=apply).grid(column=0, row=5, sticky=tk.SW, padx=5, pady=5)
 
 paperFrame.tkraise()
-citFrame.tkraise()
 
 #menubar
 menubar=tk.Menu(window)
