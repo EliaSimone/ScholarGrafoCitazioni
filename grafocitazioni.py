@@ -4,20 +4,19 @@ import math
 
 #dizionario che ha associato a ogni titolo un paper
 _papers={}
-#_perYear={}
+
 _minX=None
 _maxX=None
 _minYear=None
 _maxYear=None
 
-Y_HEIGHT=600
+Y_HEIGHT=800
+XSEP=25
 
 class Paper:
     """crea un paper da un dizionario formato scholarly"""
     WIDTH=32
     HEIGHT=32
-    XSEP=25
-    YSEP=50
 
     def __init__(self, paperDict):
         self.dict=paperDict
@@ -30,16 +29,7 @@ class Paper:
             return
         _papers[self.title]=self
 
-        self._x=(self.year-1900)*Paper.XSEP
-        """
-        l=_perYear.get(self.year)
-        if l:
-            self._y=len(l)*Paper.YSEP
-            l.append(self)
-        else:
-            _perYear[self.year]=[self]
-            self._y=0
-        """
+        self._x=(self.year-1900)
         self._y=random.uniform(0,Y_HEIGHT)
 
         global _minX
@@ -88,11 +78,11 @@ class Paper:
 
     @property
     def x(self):
-        return self._x#-_minX
+        return self._x*XSEP
 
     @x.setter
     def x(self, v):
-        self._x=v
+        self._x=int(v/XSEP)
 
     @property
     def y(self):
@@ -103,10 +93,10 @@ class Paper:
         self._y=v
 
 def minX():
-    return _minX
+    return _minX*XSEP
 
 def maxX():
-    return _maxX
+    return _maxX*XSEP
 
 def minYear():
     return _minYear

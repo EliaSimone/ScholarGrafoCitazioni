@@ -1,18 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
-#import fakescholarly as sch
 from scholar_req import ScholarRequests
 import grafocitazioni as gc
-#import re
-
-def search():
-    try:
-        paper_dict=sch.search_single_pub(e.get())
-        gc.Paper.createUnique(paper_dict)
-    except Exception:
-        print('niente paper')
-    drawAll()
+import webbrowser
 
 def mouseClick(e):
     #get pos relativa
@@ -27,7 +18,6 @@ def mouseClick(e):
         l_title['text']='Titolo: '+selected.title
         l_author['text']='Autori: '+selected.dict['author']
         l_year['text']='Anno: '+selected.dict['pub_year']
-        l_venue['text']='Venue: '+selected.dict['venue']
         l_abstr['text']='Abstract: '+selected.dict['abstract']
         paperFrame.tkraise()
     else:
@@ -38,7 +28,6 @@ def mouseClick(e):
                     selected=c
                     cb_tag.set('<vuoto>' if c.tag=='' else c.tag)
                     cb_colors.current(colors.index(c.color))
-                    #cb_colors.current(0)
                     citFrame.tkraise()
                     break
             else:
@@ -71,7 +60,6 @@ def mouseMove(e):
                     text=p.title
                     text+='\nauthors: '+p.dict['author']
                     text+='\nyear: '+p.dict['pub_year']
-                    text+='\nvenue: '+p.dict['venue']
                     text+='\nabstract: '+p.dict['abstract']
                     tooltip['text']=text
                 break
@@ -91,11 +79,16 @@ def mouseRelease(e):
     clicked=False
     mouseMove(e)
 
-def citedbyClick():
-    cited=sch.cited_by(selected.dict)
-    for c in cited:
-        selected.addCite(gc.Paper.createUnique(c))
+def mouseWheel(e):
+    gc.XSEP+=int(e.delta/25)
+    if gc.XSEP<20:
+        gc.XSEP=20
+    elif gc.XSEP>65:
+        gc.XSEP=65
+    else:
+        cs.xview_scroll(int(e.delta/16),'units')
     drawAll()
+    mouseMove(e)
 
 def onSizeChanged(e):
     sr=setScrollRegion()
@@ -127,11 +120,11 @@ def drawGrid(scrollregion):
     yw = scrollregion[3]
     
     cs.delete('grid')
-    for i in range(int(x/gc.Paper.XSEP)*gc.Paper.XSEP, xw, gc.Paper.XSEP):
+    for i in range(int(x/gc.XSEP)*gc.XSEP, xw, gc.XSEP):
         cs.create_line(i, y, i, yw, dash=(3,1), fill='#9EA', tag='grid')
     if gc.minYear()!=None:
-        for i in range(int(x/gc.Paper.XSEP)*gc.Paper.XSEP, xw, gc.Paper.XSEP*2):
-            year=(i-gc.minX())/gc.Paper.XSEP+gc.minYear()
+        for i in range(int(x/gc.XSEP)*gc.XSEP, xw, gc.XSEP*2):
+            year=(i-gc.minX())/gc.XSEP+gc.minYear()
             cs.create_text(i, cs.canvasy(cs.winfo_height()-50), text=f'{year:.0f}', tag='grid')
 
 def drawAll():
@@ -161,16 +154,51 @@ def setScrollRegion():
     cs.configure(scrollregion=sr)
     return sr
 
+def search():
+    try:
+        paper_dict=sch.search_single_pub(e.get())
+        gc.Paper.createUnique(paper_dict)
+    except Exception:
+        print('niente paper')
+    drawAll()
+
+def citedbyClick():
+    cited=sch.cited_by(selected.dict)
+    for c in cited:
+        selected.addCite(gc.Paper.createUnique(c))
+    drawAll()
+
+def referencesClick():
+    cited=sch.references(selected.dict)
+    for c in cited:
+        gc.Paper.createUnique(c).addCite(selected)
+    drawAll()
+
+def showInBrowser():
+    webbrowser.open(selected.dict['link'])
+
 def showFilter():
     filtrFrame.tkraise()
     tooltip.tkraise()
 
-def updateFilter():
-    if fltListbox.size()==0:
-        clearFilter()
-        drawAll()
-        return
+def filterLimitTo():
+    fl=list(fltListbox.get(0,fltListbox.size()-1))
+    target_list=[]
+    for p in gc.getAllPapers():
+        p.draw=False
+        for c in p.cites.values():
+            if c.tag in fl:
+                c.draw=True
+                p.draw=True
+                target_list.append(c.paper2)
+            else:
+                c.draw=False
+                
+    for p in target_list:
+        p.draw=True 
+    drawAll()
 
+def filterExclude():
     fl=list(fltListbox.get(0,fltListbox.size()-1))
     target_list=[]
     for p in gc.getAllPapers():
@@ -253,6 +281,17 @@ cs.bind("<ButtonRelease-1>", mouseRelease)
 cs.bind('<Motion>', mouseMove)
 cs.bind('<Leave>', mouseLeave)
 cs.bind('<Configure>', onSizeChanged)
+cs.bind('<MouseWheel>', mouseWheel)
+
+"""DEBUG"""
+
+def test(e):
+    print('sel:', selected)
+    print('hov:', hover)
+    
+window.bind('<KeyPress>', test)
+
+"""DEBUG"""
 
 scrollbar = tk.Scrollbar(window, orient='horizontal', command=cs.xview)
 scrollbar.grid(column=0, row=2, columnspan=2, sticky=tk.EW)
@@ -260,29 +299,29 @@ scrollbar.grid(column=0, row=2, columnspan=2, sticky=tk.EW)
 cs.configure(xscrollcommand=scrollbar.set)
 
 #Frame Opzioni Paper
-paperFrame=tk.Frame(window, width=250, padx=12)
+paperFrame=tk.Frame(window, width=280, padx=12)
 paperFrame.grid(column=2, row=1, sticky=tk.NS)
 paperFrame.grid_propagate(False)
 tk.Grid.columnconfigure(paperFrame, 0, weight=1)
 tk.Grid.columnconfigure(paperFrame, 1, weight=1)
+tk.Grid.rowconfigure(paperFrame, 5, weight=1)
 
 tk.Label(paperFrame, text='Opzioni Paper').grid(column=0, columnspan=2, row=0, pady=5)
-l_title=tk.Label(paperFrame, text='Titolo:', justify=tk.LEFT, wraplengt=225)
-l_title.grid(column=0, columnspan=2, row=1, sticky=tk.W)
-l_author=tk.Label(paperFrame, text='Autori:', justify=tk.LEFT, wraplengt=225)
-l_author.grid(column=0, columnspan=2, row=2, sticky=tk.W)
+l_title=tk.Label(paperFrame, text='Titolo:', justify=tk.LEFT, wraplengt=250)
+l_title.grid(column=0, columnspan=2, row=1, sticky=tk.W, pady=5)
+l_author=tk.Label(paperFrame, text='Autori:', justify=tk.LEFT, wraplengt=250)
+l_author.grid(column=0, columnspan=2, row=2, sticky=tk.W, pady=5)
 l_year=tk.Label(paperFrame, text='Anno:')
-l_year.grid(column=0, columnspan=2, row=3, sticky=tk.W)
-l_venue=tk.Label(paperFrame, text='Venue:', justify=tk.LEFT, wraplengt=225)
-l_venue.grid(column=0, columnspan=2, row=4, sticky=tk.W)
-l_abstr=tk.Label(paperFrame, text='Abstract:', justify=tk.LEFT, wraplengt=225)
-l_abstr.grid(column=0, columnspan=2, row=5, sticky=tk.W)
+l_year.grid(column=0, columnspan=2, row=3, sticky=tk.W, pady=5)
+l_abstr=tk.Label(paperFrame, text='Abstract:', justify=tk.LEFT, wraplengt=250)
+l_abstr.grid(column=0, columnspan=2, row=4, sticky=tk.W, pady=5)
 
-ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=6, pady=5)
-ttk.Button(paperFrame, text='Cita').grid(column=1, row=6, pady=5)
+ttk.Button(paperFrame, text='Apri online', command=showInBrowser).grid(column=0, row=6, pady=5)
+ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=7, pady=5)
+ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=7, pady=5)
 
 #Frame Opzioni Citazione
-citFrame=tk.Frame(window, width=250, padx=12)
+citFrame=tk.Frame(window, width=280, padx=12)
 citFrame.grid(column=2, row=1, sticky=tk.NS)
 citFrame.grid_propagate(False)
 tk.Grid.columnconfigure(citFrame, 0, weight=1)
@@ -304,6 +343,7 @@ def addTag():
     elem=tag_entry.get()
     if elem not in cb_tag['values']:
         cb_tag['values']+=(elem,)
+        cb_filter['values']+=(elem,)
 
 tag_entry=ttk.Entry(citFrame)
 tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)
@@ -314,46 +354,42 @@ cb_colors.bind("<<ComboboxSelected>>", updateCit)
 cb_tag.bind("<KeyRelease>", updateCit)
 
 #Frame Filtri
-filtrFrame=tk.Frame(window, width=250, padx=12)
+filtrFrame=tk.Frame(window, width=280, padx=12)
 filtrFrame.grid(column=2, row=1, sticky=tk.NS)
 filtrFrame.grid_propagate(False)
 tk.Grid.columnconfigure(filtrFrame, 0, weight=1)
-tk.Grid.columnconfigure(filtrFrame, 1, weight=5)
-tk.Grid.columnconfigure(filtrFrame, 2, weight=2)
+tk.Grid.columnconfigure(filtrFrame, 1, weight=1)
 tk.Grid.rowconfigure(filtrFrame, 5, weight=1)
 
 tk.Label(filtrFrame, text='Opzioni Filtri').grid(column=0, columnspan=3, row=0, pady=5)
-tk.Label(filtrFrame, text='Filtra per citazioni che contengono uno dei seguenti tag:', justify=tk.LEFT, wraplengt=225).grid(column=0, columnspan=3, row=1, pady=5)
+tk.Label(filtrFrame, text='Tag incusi nel filtro:').grid(column=0, columnspan=3, row=1, pady=5)
 fltListbox=tk.Listbox(filtrFrame)
 fltListbox.grid(column=0, row=2, columnspan=3, sticky=tk.EW, padx=5)
 
 def listAdd():
-    elm=fltEntry.get()
-    if elm!="":
+    fls=fltListbox.get(0,fltListbox.size()-1)
+    elm=cb_filter.get()
+    if elm!="" and elm not in fls:
         fltListbox.insert(fltListbox.size(), elm)
-        #updateFilter()
 
 def listDelete():
     elm=fltListbox.curselection()
     if len(elm)>0:
         fltListbox.delete(elm[0])
-    #updateFilter()
 
 def listClear():
     size=fltListbox.size()
     if size>0:
         fltListbox.delete(0,size-1)
-    #updateFilter()
-
-def apply():
-    updateFilter()
     
 ttk.Button(filtrFrame, text='Elimina', command=listDelete).grid(column=0, row=3, padx=5, pady=5, sticky=tk.EW)
 ttk.Button(filtrFrame, text='Elimina tutti', command=listClear).grid(column=1, row=3, columnspan=2, padx=5, pady=5, sticky=tk.EW)
-fltEntry=ttk.Entry(filtrFrame)
-fltEntry.grid(column=0, row=4, columnspan=2, padx=5, pady=5, sticky=tk.EW)
-ttk.Button(filtrFrame, text='Aggiungi', command=listAdd).grid(column=2, row=4, padx=5, pady=5)
-ttk.Button(filtrFrame, text='Applica', command=apply).grid(column=0, row=5, sticky=tk.SW, padx=5, pady=5)
+cb_filter=ttk.Combobox(filtrFrame, values=['<vuoto>','estende','usa','compete con'])
+cb_filter.grid(column=0, row=4, columnspan=2, padx=5, pady=5, sticky=tk.EW)
+ttk.Button(filtrFrame, text='Aggiugi', command=listAdd).grid(column=2, row=4, padx=5, pady=5)
+ttk.Button(filtrFrame, text='Limit to', command=filterLimitTo).grid(column=0, row=6, sticky=tk.EW, padx=5, pady=5)
+ttk.Button(filtrFrame, text='Exclude', command=filterExclude).grid(column=1, columnspan=2, row=6, sticky=tk.EW, padx=5, pady=5)
+ttk.Button(filtrFrame, text='Remove Filter', command=clearFilter).grid(column=0, columnspan=3, row=7, sticky=tk.EW, padx=5, pady=5)
 
 paperFrame.tkraise()
 
