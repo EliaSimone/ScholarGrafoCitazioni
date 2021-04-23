@@ -204,7 +204,7 @@ def filterExclude():
     for p in gc.getAllPapers():
         p.draw=False
         for c in p.cites.values():
-            if c.tag in fl:
+            if c.tag not in fl:
                 c.draw=True
                 p.draw=True
                 target_list.append(c.paper2)
@@ -220,6 +220,7 @@ def clearFilter():
         p.draw=True
         for c in p.cites.values():
             c.draw=True
+    drawAll()
             
 def updateCit(e):
     tag=cb_tag.get()
@@ -344,6 +345,7 @@ def addTag():
     if elem not in cb_tag['values']:
         cb_tag['values']+=(elem,)
         cb_filter['values']+=(elem,)
+        tag_entry.delete(0,tk.END)
 
 tag_entry=ttk.Entry(citFrame)
 tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)

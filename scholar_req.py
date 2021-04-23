@@ -1,7 +1,6 @@
 import helium
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
-import time
 
 _IMPLICIT_WAIT=12
 
@@ -15,11 +14,11 @@ class ScholarRequests:
         op.add_argument('disable-infobars')
         op.add_argument("--disable-extensions")
         try:
-            self._chrm=helium.start_chrome(headless=False, options=op)
+            self._chrm=helium.start_chrome(headless=True, options=op)
         except Exception:
             path=ChromeDriverManager.install()
             op.binary_location=path
-            self._chrm=helium.start_chrome(headless=False, options=op)
+            self._chrm=helium.start_chrome(headless=True, options=op)
 
     def search_single_pub(self, query):
         """restituisce il primo paper dalla ricerca"""
@@ -52,7 +51,7 @@ class ScholarRequests:
         #self._wait('.card-container')
 
         page=1
-        while page<5:
+        while page<6:
             papers=self._chrm.find_elements_by_css_selector('#citing-papers .cl-paper-row.citation-list__paper-row')
             for p in papers:
                 title=p.find_elements_by_css_selector('.cl-paper-title')
@@ -105,7 +104,7 @@ class ScholarRequests:
         #self._wait('.card-container')
 
         page=1
-        while page<5:
+        while page<6:
             papers=self._chrm.find_elements_by_css_selector('#references .cl-paper-row.citation-list__paper-row')
             for p in papers:
                 title=p.find_elements_by_css_selector('.cl-paper-title')
@@ -157,14 +156,6 @@ class ScholarRequests:
         l=self._chrm.find_elements_by_css_selector(css_query)
         self._chrm.implicitly_wait(0)
         return l;
-
-    def _nextPage(self):
-        #test next page
-        l=self.chrm.find_elements_by_css_selector('.cl-pager.cl-pager--has-next-enabled')
-
-        #click next page
-        elm=self.chrm.find_element_by_css_selector('.cl-pager__button.cl-pager__next')
-        self.chrm.execute_script("arguments[0].click();", elm)
 
     def exit(self):
         helium.kill_browser()
