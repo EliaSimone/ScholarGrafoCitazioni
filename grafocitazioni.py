@@ -10,8 +10,9 @@ _maxX=None
 _minYear=None
 _maxYear=None
 
-Y_HEIGHT=800
-XSEP=25
+Y_MAX=600
+Y_SPAWN=450
+XSEP=35
 
 class Paper:
     """crea un paper da un dizionario formato scholarly"""
@@ -22,7 +23,7 @@ class Paper:
         self.dict=paperDict
         self.title=paperDict['title']
         self.year=int(paperDict['pub_year'])
-        self.cites={}
+        self.cites=set()
         self.draw=True
 
         if self.title in _papers:
@@ -30,7 +31,7 @@ class Paper:
         _papers[self.title]=self
 
         self._x=(self.year-1900)
-        self._y=random.uniform(0,Y_HEIGHT)
+        self._y=random.uniform(-Y_SPAWN,Y_SPAWN)
 
         global _minX
         global _maxX
@@ -59,7 +60,7 @@ class Paper:
 
     def addCite(self, paper, tag=''):
         """aggiunge citazione con tag e riferimento al paper""" 
-        self.cites[paper.title]=Citation(self, paper, tag)
+        self.cites.add(Citation(self, paper, tag))
 
     def clearCites(self):
         """svuota lista citazioni"""

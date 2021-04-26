@@ -22,7 +22,7 @@ def mouseClick(e):
         paperFrame.tkraise()
     else:
         for p in gc.getAllPapers():
-            for c in p.cites.values():
+            for c in p.cites:
                 if (c.checkPoint(x,y) and c.draw):
                     print('ho cliccato su un arco')
                     selected=c
@@ -42,12 +42,12 @@ def mouseMove(e):
     y = cs.canvasy(e.y)
 
     global hover
-
+    
     if clicked:
-        if y-gc.Paper.HEIGHT/2<0:
-            selected.y=0
-        elif y-gc.Paper.HEIGHT/2>gc.Y_HEIGHT:
-            selected.y=gc.Y_HEIGHT
+        if y-gc.Paper.HEIGHT/2<-gc.Y_MAX:
+            selected.y=-gc.Y_MAX
+        elif y-gc.Paper.HEIGHT/2>gc.Y_MAX:
+            selected.y=gc.Y_MAX
         else:
             selected.y=y-gc.Paper.HEIGHT/2
         drawAll()
@@ -80,13 +80,13 @@ def mouseRelease(e):
     mouseMove(e)
 
 def mouseWheel(e):
-    gc.XSEP+=int(e.delta/25)
+    gc.XSEP+=int(e.delta/20)
     if gc.XSEP<20:
         gc.XSEP=20
-    elif gc.XSEP>65:
-        gc.XSEP=65
+    elif gc.XSEP>250:
+        gc.XSEP=250
     else:
-        cs.xview_scroll(int(e.delta/16),'units')
+        cs.xview_scroll(int(e.delta/15),'units')
     drawAll()
     mouseMove(e)
 
@@ -100,7 +100,7 @@ def drawPapers():
     
     for p in gc.getAllPapers():
         if p.draw:
-            for c in p.cites.values():
+            for c in p.cites:
                 if c.draw:
                     if selected is c:
                         cs.create_line(c.x1, c.y1, c.x2, c.y2, width=2, arrow=tk.LAST, fill=c.color, tag='grafo')
@@ -154,6 +154,12 @@ def setScrollRegion():
     cs.configure(scrollregion=sr)
     return sr
 
+def yscroll(a,y):
+    cs.yview(a,y)
+    sr=setScrollRegion()
+    drawGrid(sr)
+    cs.tag_lower('grid')
+    
 def search():
     try:
         paper_dict=sch.search_single_pub(e.get())
@@ -178,47 +184,57 @@ def showInBrowser():
     webbrowser.open(selected.dict['link'])
 
 def showFilter():
+    global selected
+    selected=None
     filtrFrame.tkraise()
     tooltip.tkraise()
 
 def filterLimitTo():
     fl=list(fltListbox.get(0,fltListbox.size()-1))
-    target_list=[]
+    if fl.count('<vuoto>')>0:
+        fl.append("")
+    target_set=set()
     for p in gc.getAllPapers():
         p.draw=False
-        for c in p.cites.values():
+        for c in p.cites:
             if c.tag in fl:
                 c.draw=True
                 p.draw=True
-                target_list.append(c.paper2)
+                target_set.add(c.paper2)
             else:
                 c.draw=False
                 
-    for p in target_list:
+    for p in target_set:
         p.draw=True 
     drawAll()
 
 def filterExclude():
     fl=list(fltListbox.get(0,fltListbox.size()-1))
-    target_list=[]
+    if fl.count('<vuoto>')>0:
+        fl.append("")
+    draw_set=set()
+    exclude_set=set()
     for p in gc.getAllPapers():
-        p.draw=False
-        for c in p.cites.values():
-            if c.tag not in fl:
-                c.draw=True
-                p.draw=True
-                target_list.append(c.paper2)
-            else:
+        p.draw=True
+        for c in p.cites:
+            if c.tag in fl:
                 c.draw=False
+                exclude_set.add(p)
+                exclude_set.add(c.paper2)
+            else:
+                c.draw=True
+                draw_set.add(p)
+                draw_set.add(c.paper2)
                 
-    for p in target_list:
-        p.draw=True 
+    for p in exclude_set:
+        if p not in draw_set:
+            p.draw=False
     drawAll()
 
 def clearFilter():
     for p in gc.getAllPapers():
         p.draw=True
-        for c in p.cites.values():
+        for c in p.cites:
             c.draw=True
     drawAll()
             
@@ -297,11 +313,15 @@ window.bind('<KeyPress>', test)
 scrollbar = tk.Scrollbar(window, orient='horizontal', command=cs.xview)
 scrollbar.grid(column=0, row=2, columnspan=2, sticky=tk.EW)
 
+vscrollbar = tk.Scrollbar(window, orient='vertical', command=yscroll)
+vscrollbar.grid(column=2, row=1, rowspan=2, sticky=tk.NS)
+
 cs.configure(xscrollcommand=scrollbar.set)
+cs.configure(yscrollcommand=vscrollbar.set)
 
 #Frame Opzioni Paper
 paperFrame=tk.Frame(window, width=280, padx=12)
-paperFrame.grid(column=2, row=1, sticky=tk.NS)
+paperFrame.grid(column=3, row=1, sticky=tk.NS)
 paperFrame.grid_propagate(False)
 tk.Grid.columnconfigure(paperFrame, 0, weight=1)
 tk.Grid.columnconfigure(paperFrame, 1, weight=1)
@@ -323,7 +343,7 @@ ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=
 
 #Frame Opzioni Citazione
 citFrame=tk.Frame(window, width=280, padx=12)
-citFrame.grid(column=2, row=1, sticky=tk.NS)
+citFrame.grid(column=3, row=1, sticky=tk.NS)
 citFrame.grid_propagate(False)
 tk.Grid.columnconfigure(citFrame, 0, weight=1)
 tk.Grid.columnconfigure(citFrame, 1, weight=1)
@@ -342,7 +362,7 @@ cb_colors.grid(column=1, columnspan=2, row=2, pady=5)
 
 def addTag():
     elem=tag_entry.get()
-    if elem not in cb_tag['values']:
+    if elem!="" and elem not in cb_tag['values']:
         cb_tag['values']+=(elem,)
         cb_filter['values']+=(elem,)
         tag_entry.delete(0,tk.END)
@@ -357,7 +377,7 @@ cb_tag.bind("<KeyRelease>", updateCit)
 
 #Frame Filtri
 filtrFrame=tk.Frame(window, width=280, padx=12)
-filtrFrame.grid(column=2, row=1, sticky=tk.NS)
+filtrFrame.grid(column=3, row=1, sticky=tk.NS)
 filtrFrame.grid_propagate(False)
 tk.Grid.columnconfigure(filtrFrame, 0, weight=1)
 tk.Grid.columnconfigure(filtrFrame, 1, weight=1)
@@ -393,7 +413,7 @@ ttk.Button(filtrFrame, text='Limit to', command=filterLimitTo).grid(column=0, ro
 ttk.Button(filtrFrame, text='Exclude', command=filterExclude).grid(column=1, columnspan=2, row=6, sticky=tk.EW, padx=5, pady=5)
 ttk.Button(filtrFrame, text='Remove Filter', command=clearFilter).grid(column=0, columnspan=3, row=7, sticky=tk.EW, padx=5, pady=5)
 
-paperFrame.tkraise()
+#paperFrame.tkraise()
 
 #menubar
 menubar=tk.Menu(window)
