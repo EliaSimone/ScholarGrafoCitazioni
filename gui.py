@@ -19,6 +19,7 @@ def mouseClick(e):
         l_author['text']='Autori: '+selected.dict['author']
         l_year['text']='Anno: '+selected.dict['pub_year']
         l_abstr['text']='Abstract: '+selected.dict['abstract']
+        b_hide['text']='Mostra citazioni' if selected.hide else 'Nascondi citazioni'
         paperFrame.tkraise()
     else:
         for p in gc.getAllPapers():
@@ -183,32 +184,70 @@ def referencesClick():
 def showInBrowser():
     webbrowser.open(selected.dict['link'])
 
+def toogle_hide():
+    if selected.hide:
+        selected.hide=False
+        b_hide['text']='Nascondi citazioni'
+    else:
+        selected.hide=True
+        b_hide['text']='Mostra citazioni'
+    lastFilter()
+    """
+    draw_set=set()
+    exclude_set=set()
+    for p in gc.getAllPapers():
+        for c in p.cites:
+            if p.hide:
+                c.draw=False
+                exclude_set.add(c.paper2)
+            elif c.paper2.draw:
+                draw_set.add(c.paper2)
+    for p in exclude_set:
+        if p not in draw_set:
+            p.draw=False
+    drawAll()
+    """
+
 def showFilter():
     global selected
     selected=None
+    drawPapers()
     filtrFrame.tkraise()
     tooltip.tkraise()
 
 def filterLimitTo():
+    global lastFilter
+    lastFilter=filterLimitTo
+    
     fl=list(fltListbox.get(0,fltListbox.size()-1))
     if fl.count('<vuoto>')>0:
         fl.append("")
-    target_set=set()
+    draw_set=set()
+    exclude_set=set()
     for p in gc.getAllPapers():
-        p.draw=False
+        p.draw=True
         for c in p.cites:
-            if c.tag in fl:
-                c.draw=True
-                p.draw=True
-                target_set.add(c.paper2)
-            else:
+            if c.tag not in fl:
                 c.draw=False
+                exclude_set.add(p)
+                exclude_set.add(c.paper2)
+            elif p.hide:
+                c.draw=False
+                exclude_set.add(c.paper2)
+            else:
+                c.draw=True
+                draw_set.add(p)
+                draw_set.add(c.paper2)
                 
-    for p in target_set:
-        p.draw=True 
+    for p in exclude_set:
+        if p not in draw_set:
+            p.draw=False
     drawAll()
 
 def filterExclude():
+    global lastFilter
+    lastFilter=filterExclude
+    
     fl=list(fltListbox.get(0,fltListbox.size()-1))
     if fl.count('<vuoto>')>0:
         fl.append("")
@@ -221,6 +260,9 @@ def filterExclude():
                 c.draw=False
                 exclude_set.add(p)
                 exclude_set.add(c.paper2)
+            elif p.hide:
+                c.draw=False
+                exclude_set.add(c.paper2)
             else:
                 c.draw=True
                 draw_set.add(p)
@@ -232,10 +274,25 @@ def filterExclude():
     drawAll()
 
 def clearFilter():
+    global lastFilter
+    lastFilter=clearFilter
+    
+    draw_set=set()
+    exclude_set=set()
     for p in gc.getAllPapers():
         p.draw=True
         for c in p.cites:
-            c.draw=True
+            if p.hide:
+                c.draw=False
+                exclude_set.add(c.paper2)
+            else:
+                c.draw=True
+                draw_set.add(p)
+                draw_set.add(c.paper2)
+                
+    for p in exclude_set:
+        if p not in draw_set:
+            p.draw=False
     drawAll()
             
 def updateCit(e):
@@ -273,6 +330,7 @@ hover=None
 selected=None
 
 clicked=False
+lastFilter=clearFilter
 
 sch=ScholarRequests()
 
@@ -325,7 +383,7 @@ paperFrame.grid(column=3, row=1, sticky=tk.NS)
 paperFrame.grid_propagate(False)
 tk.Grid.columnconfigure(paperFrame, 0, weight=1)
 tk.Grid.columnconfigure(paperFrame, 1, weight=1)
-tk.Grid.rowconfigure(paperFrame, 5, weight=1)
+tk.Grid.rowconfigure(paperFrame, 6, weight=1)
 
 tk.Label(paperFrame, text='Opzioni Paper').grid(column=0, columnspan=2, row=0, pady=5)
 l_title=tk.Label(paperFrame, text='Titolo:', justify=tk.LEFT, wraplengt=250)
@@ -336,10 +394,13 @@ l_year=tk.Label(paperFrame, text='Anno:')
 l_year.grid(column=0, columnspan=2, row=3, sticky=tk.W, pady=5)
 l_abstr=tk.Label(paperFrame, text='Abstract:', justify=tk.LEFT, wraplengt=250)
 l_abstr.grid(column=0, columnspan=2, row=4, sticky=tk.W, pady=5)
+b_hide=ttk.Button(paperFrame, text='Nascondi citazioni', command=toogle_hide)
+b_hide.grid(column=0, row=5, pady=5)
 
-ttk.Button(paperFrame, text='Apri online', command=showInBrowser).grid(column=0, row=6, pady=5)
-ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=7, pady=5)
-ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=7, pady=5)
+
+ttk.Button(paperFrame, text='Apri online', command=showInBrowser).grid(column=0, row=7, pady=5)
+ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=8, pady=5)
+ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=8, pady=5)
 
 #Frame Opzioni Citazione
 citFrame=tk.Frame(window, width=280, padx=12)

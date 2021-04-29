@@ -14,7 +14,7 @@ class ScholarRequests:
         op.add_argument('disable-infobars')
         op.add_argument("--disable-extensions")
         try:
-            self._chrm=helium.start_chrome(headless=True, options=op)
+            self._chrm=helium.start_chrome(headless=False, options=op)
         except Exception:
             path=ChromeDriverManager.install()
             op.binary_location=path
@@ -91,7 +91,7 @@ class ScholarRequests:
             if len(l)==0:
                 break;
             #click next page
-            elm=self._chrm.find_element_by_css_selector('.cl-pager__button.cl-pager__next')
+            elm=self._chrm.find_element_by_css_selector('#citing-papers .cl-pager__button.cl-pager__next')
             self._chrm.execute_script("arguments[0].click();", elm)
             page+=1
             self._wait(f'#citing-papers .cl-pager[data-curr-page-num="{page}"]')
@@ -144,7 +144,7 @@ class ScholarRequests:
             if len(l)==0:
                 break;
             #click next page
-            elm=self._chrm.find_element_by_css_selector('.cl-pager__button.cl-pager__next')
+            elm=self._chrm.find_element_by_css_selector('#references .cl-pager__button.cl-pager__next')
             self._chrm.execute_script("arguments[0].click();", elm)
             page+=1
             self._wait(f'#references .cl-pager[data-curr-page-num="{page}"]')

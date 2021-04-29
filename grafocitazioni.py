@@ -25,6 +25,7 @@ class Paper:
         self.year=int(paperDict['pub_year'])
         self.cites=set()
         self.draw=True
+        self.hide=False
 
         if self.title in _papers:
             return
@@ -59,7 +60,10 @@ class Paper:
         return _papers[title]
 
     def addCite(self, paper, tag=''):
-        """aggiunge citazione con tag e riferimento al paper""" 
+        """aggiunge citazione con tag e riferimento al paper"""
+        for c in self.cites:
+            if paper is c.paper2:
+                return
         self.cites.add(Citation(self, paper, tag))
 
     def clearCites(self):
