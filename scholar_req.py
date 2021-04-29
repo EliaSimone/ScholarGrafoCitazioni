@@ -14,7 +14,7 @@ class ScholarRequests:
         op.add_argument('disable-infobars')
         op.add_argument("--disable-extensions")
         try:
-            self._chrm=helium.start_chrome(headless=False, options=op)
+            self._chrm=helium.start_chrome(headless=True, options=op)
         except Exception:
             path=ChromeDriverManager.install()
             op.binary_location=path
