@@ -24,6 +24,7 @@ class Paper:
         self.title=paperDict['title']
         self.year=int(paperDict['pub_year'])
         self.cites=set()
+        self.pdf=None
         self.draw=True
         self.hide=False
 
@@ -97,6 +98,13 @@ class Paper:
     def y(self, v):
         self._y=v
 
+    def jsonDict(self):
+        return {'title': self.dict['title'],
+            'id': id(self),
+            'author': self.dict['author'],
+            'year': self.dict['pub_year'],
+            'abstract': self.dict['abstract']}
+
 def minX():
     return _minX*XSEP
 
@@ -162,6 +170,11 @@ class Citation:
         if abs(yy-y)>stroke and abs(xx-x)>stroke:
             return False
         return True
+
+    def jsonDict(self):
+        return {'cited_paper': id(self.paper1),
+            'citer_paper': id(self.paper2),
+            'tag': self.tag}
 
 def exists(title):
     if _papers.get(title):

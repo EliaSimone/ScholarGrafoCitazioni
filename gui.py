@@ -4,6 +4,7 @@ from tkinter import filedialog
 from scholar_req import ScholarRequests
 import grafocitazioni as gc
 import webbrowser
+import json
 
 def mouseClick(e):
     #get pos relativa
@@ -20,6 +21,18 @@ def mouseClick(e):
         l_year['text']='Anno: '+selected.dict['pub_year']
         l_abstr['text']='Abstract: '+selected.dict['abstract']
         b_hide['text']='Mostra citazioni' if selected.hide else 'Nascondi citazioni'
+        if selected.pdf:
+            e_pdf.config(state='active')
+            e_pdf.delete(0, tk.END)
+            e_pdf.insert(0, selected.pdf)
+            e_pdf.config(state='readonly')
+            b_pdf.config(state='active')
+        else:
+            e_pdf.config(state='active')
+            e_pdf.delete(0, tk.END)
+            e_pdf.insert(0, 'No File')
+            e_pdf.config(state='readonly')
+            b_pdf.config(state='disabled')
         paperFrame.tkraise()
     else:
         for p in gc.getAllPapers():
@@ -90,6 +103,26 @@ def mouseWheel(e):
         cs.xview_scroll(int(e.delta/15),'units')
     drawAll()
     mouseMove(e)
+
+def zoomIn():
+    gc.XSEP+=6
+    if gc.XSEP<20:
+        gc.XSEP=20
+    elif gc.XSEP>250:
+        gc.XSEP=250
+    else:
+        cs.xview_scroll(8,'units')
+    drawAll()
+
+def zoomOut():
+    gc.XSEP-=6
+    if gc.XSEP<20:
+        gc.XSEP=20
+    elif gc.XSEP>250:
+        gc.XSEP=250
+    else:
+        cs.xview_scroll(-8,'units')
+    drawAll()
 
 def onSizeChanged(e):
     sr=setScrollRegion()
@@ -163,7 +196,7 @@ def yscroll(a,y):
     
 def search():
     try:
-        paper_dict=sch.search_single_pub(e.get())
+        paper_dict=sch.search_single_pub(search_e.get())
         gc.Paper.createUnique(paper_dict)
     except Exception:
         print('niente paper')
@@ -303,6 +336,18 @@ def updateCit(e):
     selected.color=color
     drawAll()
 
+def exportJson():
+    f=filedialog.asksaveasfile(mode='w', defaultextension='.json', filetypes=[('JSON','*.json')])
+    if f:
+        pl=[]
+        cl=[]
+        for p in gc.getAllPapers():
+            pl.append(p.jsonDict())
+            for c in p.cites:
+                cl.append(c.jsonDict())
+        json.dump(pl+cl, f, indent=2)
+        f.close()
+
 def save():
     f=filedialog.asksaveasfile(mode='wb', defaultextension='.grf', filetypes=[('grafi','*.grf')])
     if f:
@@ -343,14 +388,17 @@ window.minsize(550,280)
 tk.Grid.columnconfigure(window, 1, weight=1)
 tk.Grid.rowconfigure(window, 1, weight=1)
 
-e=ttk.Entry(window)
-e.grid(column=0, row=0, padx=5, pady=5, sticky=tk.E)
+search_e=ttk.Entry(window)
+search_e.grid(column=0, row=0, padx=5, pady=5, sticky=tk.E)
 
-b=ttk.Button(window,text="Cerca",command=search)
-b.grid(column=1, row=0, padx=5, pady=5, sticky=tk.W)
+search_b=ttk.Button(window,text="Cerca",command=search)
+search_b.grid(column=1, row=0, padx=5, pady=5, sticky=tk.W)
+
+ttk.Button(window,text="Zoom +",command=zoomIn).grid(column=2, row=0, padx=5, pady=5)
+ttk.Button(window,text="Zoom -",command=zoomOut).grid(column=3, row=0, padx=5, pady=5)
 
 cs=tk.Canvas(window, bg='white', borderwidth=2, relief='ridge', highlightthickness=0)
-cs.grid(column=0, row=1, columnspan=2, sticky=tk.NSEW)
+cs.grid(column=0, row=1, columnspan=4, sticky=tk.NSEW)
 cs.bind('<Button-1>', mouseClick)
 cs.bind("<ButtonRelease-1>", mouseRelease)
 cs.bind('<Motion>', mouseMove)
@@ -369,21 +417,34 @@ window.bind('<KeyPress>', test)
 """DEBUG"""
 
 scrollbar = tk.Scrollbar(window, orient='horizontal', command=cs.xview)
-scrollbar.grid(column=0, row=2, columnspan=2, sticky=tk.EW)
+scrollbar.grid(column=0, row=2, columnspan=4, sticky=tk.EW)
 
 vscrollbar = tk.Scrollbar(window, orient='vertical', command=yscroll)
-vscrollbar.grid(column=2, row=1, rowspan=2, sticky=tk.NS)
+vscrollbar.grid(column=4, row=1, rowspan=2, sticky=tk.NS)
 
 cs.configure(xscrollcommand=scrollbar.set)
 cs.configure(yscrollcommand=vscrollbar.set)
 
+def choosePdf():
+    f=filedialog.askopenfilename(filetypes=[('PDF','*.pdf')])
+    if f:
+        e_pdf.config(state='active')
+        e_pdf.delete(0, tk.END)
+        e_pdf.insert(0, f)
+        e_pdf.config(state='readonly')
+        b_pdf.config(state='active')
+        selected.pdf=f
+
+def openPdf():
+    webbrowser.open(selected.pdf)
+
 #Frame Opzioni Paper
 paperFrame=tk.Frame(window, width=280, padx=12)
-paperFrame.grid(column=3, row=1, sticky=tk.NS)
+paperFrame.grid(column=5, row=1, sticky=tk.NS)
 paperFrame.grid_propagate(False)
 tk.Grid.columnconfigure(paperFrame, 0, weight=1)
 tk.Grid.columnconfigure(paperFrame, 1, weight=1)
-tk.Grid.rowconfigure(paperFrame, 6, weight=1)
+tk.Grid.rowconfigure(paperFrame, 9, weight=1)
 
 tk.Label(paperFrame, text='Opzioni Paper').grid(column=0, columnspan=2, row=0, pady=5)
 l_title=tk.Label(paperFrame, text='Titolo:', justify=tk.LEFT, wraplengt=250)
@@ -393,18 +454,27 @@ l_author.grid(column=0, columnspan=2, row=2, sticky=tk.W, pady=5)
 l_year=tk.Label(paperFrame, text='Anno:')
 l_year.grid(column=0, columnspan=2, row=3, sticky=tk.W, pady=5)
 l_abstr=tk.Label(paperFrame, text='Abstract:', justify=tk.LEFT, wraplengt=250)
-l_abstr.grid(column=0, columnspan=2, row=4, sticky=tk.W, pady=5)
+l_abstr.grid(column=0, columnspan=2, row=4, sticky=tk.W, pady=(5,15))
+
 b_hide=ttk.Button(paperFrame, text='Nascondi citazioni', command=toogle_hide)
-b_hide.grid(column=0, row=5, pady=5)
+b_hide.grid(column=0, row=5, columnspan=2, sticky=tk.W, padx=5, pady=15)
 
+tk.Label(paperFrame, text='PDF del paper').grid(column=0, row=6, sticky=tk.W, pady=5)
+e_pdf=ttk.Entry(paperFrame)
+e_pdf.grid(column=0, row=7, columnspan=2, sticky=tk.EW, padx=5, pady=5)
+e_pdf.insert(0,'No File')
+e_pdf.config(state='readonly')
+ttk.Button(paperFrame, text='Sfoglia', command=choosePdf).grid(column=0, row=8, sticky=tk.EW, padx=5, pady=5)
+b_pdf=ttk.Button(paperFrame, text='Apri', command=openPdf)
+b_pdf.grid(column=1, row=8, sticky=tk.EW, padx=5, pady=5)
 
-ttk.Button(paperFrame, text='Apri online', command=showInBrowser).grid(column=0, row=7, pady=5)
-ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=8, pady=5)
-ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=8, pady=5)
+ttk.Button(paperFrame, text='Apri online', command=showInBrowser).grid(column=0, row=10, sticky=tk.EW, padx=10, pady=5)
+ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=11, sticky=tk.EW, padx=10, pady=5)
+ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=11, sticky=tk.EW, padx=10, pady=5)
 
 #Frame Opzioni Citazione
 citFrame=tk.Frame(window, width=280, padx=12)
-citFrame.grid(column=3, row=1, sticky=tk.NS)
+citFrame.grid(column=5, row=1, sticky=tk.NS)
 citFrame.grid_propagate(False)
 tk.Grid.columnconfigure(citFrame, 0, weight=1)
 tk.Grid.columnconfigure(citFrame, 1, weight=1)
@@ -438,7 +508,7 @@ cb_tag.bind("<KeyRelease>", updateCit)
 
 #Frame Filtri
 filtrFrame=tk.Frame(window, width=280, padx=12)
-filtrFrame.grid(column=3, row=1, sticky=tk.NS)
+filtrFrame.grid(column=5, row=1, sticky=tk.NS)
 filtrFrame.grid_propagate(False)
 tk.Grid.columnconfigure(filtrFrame, 0, weight=1)
 tk.Grid.columnconfigure(filtrFrame, 1, weight=1)
@@ -481,7 +551,7 @@ menubar=tk.Menu(window)
 filemenu=tk.Menu(menubar, tearoff=0)
 filemenu.add_command(label='Salva', command=save)
 filemenu.add_command(label='Carica', command=load)
-#filemenu.add_command(label='Esporta json')
+filemenu.add_command(label='Esporta json', command=exportJson)
 filemenu.add_command(label='Esci', command=window.destroy)
 menubar.add_cascade(label='File', menu=filemenu)
 menubar.add_command(label='Filtra', command=showFilter)
