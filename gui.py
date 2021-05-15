@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
 from scholar_req import ScholarRequests
 import grafocitazioni as gc
 import webbrowser
@@ -43,6 +43,7 @@ def mouseClick(e):
                     cb_tag.set('<vuoto>' if c.tag=='' else c.tag)
                     cb_colors.current(colors.index(c.color))
                     citFrame.tkraise()
+                    updateTagSample()
                     break
             else:
                 continue
@@ -94,35 +95,35 @@ def mouseRelease(e):
     mouseMove(e)
 
 def mouseWheel(e):
+    xv=cs.xview()
     gc.XSEP+=int(e.delta/20)
     if gc.XSEP<20:
         gc.XSEP=20
     elif gc.XSEP>250:
         gc.XSEP=250
-    else:
-        cs.xview_scroll(int(e.delta/15),'units')
     drawAll()
+    cs.xview_moveto(xv[0])
     mouseMove(e)
 
 def zoomIn():
+    xv=cs.xview()
     gc.XSEP+=6
     if gc.XSEP<20:
         gc.XSEP=20
     elif gc.XSEP>250:
         gc.XSEP=250
-    else:
-        cs.xview_scroll(8,'units')
     drawAll()
+    cs.xview_moveto(xv[0])
 
 def zoomOut():
+    xv=cs.xview()
     gc.XSEP-=6
     if gc.XSEP<20:
         gc.XSEP=20
     elif gc.XSEP>250:
         gc.XSEP=250
-    else:
-        cs.xview_scroll(-8,'units')
     drawAll()
+    cs.xview_moveto(xv[0])
 
 def onSizeChanged(e):
     sr=setScrollRegion()
@@ -197,22 +198,37 @@ def yscroll(a,y):
 def search():
     try:
         paper_dict=sch.search_single_pub(search_e.get())
+        if paper_dict==None:
+            messagebox.showwarning('Nessun risultato','Impossibile trovare il paper')
+            return
         gc.Paper.createUnique(paper_dict)
+        drawAll()
     except Exception:
-        print('niente paper')
-    drawAll()
+        messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def citedbyClick():
-    cited=sch.cited_by(selected.dict)
-    for c in cited:
-        selected.addCite(gc.Paper.createUnique(c))
-    drawAll()
+    try:
+        cited=sch.cited_by(selected.dict)     
+        if len(cited)==0:
+            messagebox.showwarning('Nessun risultato','Il paper non riceve citazioni')
+            return
+        for c in cited:
+            selected.addCite(gc.Paper.createUnique(c))
+        drawAll()
+    except Exception:
+        messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def referencesClick():
-    cited=sch.references(selected.dict)
-    for c in cited:
-        gc.Paper.createUnique(c).addCite(selected)
-    drawAll()
+    try:
+        cited=sch.references(selected.dict)
+        if len(cited)==0:
+            messagebox.showwarning('Nessun risultato','Il paper non ha citazioni')
+            return
+        for c in cited:
+            gc.Paper.createUnique(c).addCite(selected)
+        drawAll()
+    except Exception:
+        messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def showInBrowser():
     webbrowser.open(selected.dict['link'])
@@ -247,6 +263,7 @@ def showFilter():
     drawPapers()
     filtrFrame.tkraise()
     tooltip.tkraise()
+    updateTagSample()
 
 def filterLimitTo():
     global lastFilter
@@ -327,12 +344,22 @@ def clearFilter():
         if p not in draw_set:
             p.draw=False
     drawAll()
+
+def updateTagSample():
+    preset=('<vuoto>', 'cita', 'estende', 'usa')
+    sample=set()
+    for p in gc.getAllPapers():
+        for c in p.cites:
+            if (c.tag != "" and c.tag not in preset):
+                sample.add(c.tag)
+    cb_tag['values']=preset+tuple(sample)
+    cb_filter['values']=preset+tuple(sample)
             
 def updateCit(e):
     tag=cb_tag.get()
     color=colors[cb_colors.current()]
     
-    selected.tag=tag if tag!='<vuoto>' else ''
+    selected.tag=tag if tag!='<vuoto>' else ""
     selected.color=color
     drawAll()
 
@@ -369,6 +396,7 @@ def load():
     hover=None
     clicked=False
     drawAll()
+    updateTagSample()
 
 #Paper col mouse sopra
 hover=None
@@ -498,9 +526,9 @@ def addTag():
         cb_filter['values']+=(elem,)
         tag_entry.delete(0,tk.END)
 
-tag_entry=ttk.Entry(citFrame)
-tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)
-ttk.Button(citFrame, text='aggiungi', command=addTag).grid(column=2, row=3, padx=5, pady=5)
+#tag_entry=ttk.Entry(citFrame)
+#tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)
+#ttk.Button(citFrame, text='aggiungi', command=addTag).grid(column=2, row=3, padx=5, pady=5)
 
 cb_tag.bind("<<ComboboxSelected>>", updateCit)
 cb_colors.bind("<<ComboboxSelected>>", updateCit)

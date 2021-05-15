@@ -27,12 +27,17 @@ class ScholarRequests:
         helium.go_to(url)
         self._wait('.result-page')
 
-        title=self._chrm.find_element_by_class_name('cl-paper-title').text
-        author=self._chrm.find_element_by_class_name('cl-paper-authors').text
-        year=self._chrm.find_element_by_class_name('cl-paper-pubdates').text[-4:]
-        link=self._chrm.find_element_by_css_selector('.cl-paper-row > a').get_attribute('href')
+        paper=self._chrm.find_elements_by_css_selector('.cl-paper-row')
+        if len(paper)==0:
+            return None
+        paper=paper[0]
 
-        abs_l=self._chrm.find_element_by_class_name('cl-paper-row').find_elements_by_css_selector('.cl-paper-abstract span span')
+        title=paper.find_element_by_class_name('cl-paper-title').text
+        author=paper.find_element_by_class_name('cl-paper-authors').text
+        year=paper.find_element_by_class_name('cl-paper-pubdates').text[-4:]
+        link=paper.find_element_by_css_selector('.cl-paper-row > a').get_attribute('href')
+
+        abs_l=paper.find_elements_by_css_selector('.cl-paper-abstract span span')
         abstract=""
         if len(abs_l)>0:
             abstract=abs_l[0].text
