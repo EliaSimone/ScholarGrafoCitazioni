@@ -1,0 +1,29 @@
+define
+  
+paper sub entity,
+	owns title,
+	owns year,
+	owns author,
+	owns abstract,
+	plays citation:citer,
+	plays citation:cited;
+
+citation sub relation,
+	owns tag,
+	relates citer,
+	relates cited;
+
+title sub attribute,
+    value string;
+
+year sub attribute,
+	value long;
+
+author sub attribute,
+    value string;
+
+abstract sub attribute,
+    value string;
+
+tag sub attribute,
+    value string;
