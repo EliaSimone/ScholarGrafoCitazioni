@@ -375,6 +375,22 @@ def exportJson():
         json.dump(pl+cl, f, indent=2)
         f.close()
 
+def exportGraql():
+    f=filedialog.asksaveasfile(mode='w', defaultextension='.gql', filetypes=[('GraQL','*.gql')])
+    if f:
+        for p in gc.getAllPapers():
+            f.write("insert $p isa paper, has title \"{}\", has year {}, has author \"{}\", has abstract \"{}\";\n".format(p.title,p.year,p.dict['author'],p.dict['abstract']))
+        f.write("\n")
+        for p in gc.getAllPapers():
+            for c in p.cites:
+                f.write("match\n")
+                f.write("$paper1 isa paper, has name \"{}\";\n".format(p.title))
+                f.write("$paper2 isa paper, has name \"{}\";\n".format(c.paper2.title))
+                f.write("insert $citation (citer: $paper1, cited: $paper2) isa citation;\n")
+                f.write("$citation has tag \"{}\";\n\n".format(c.tag))
+        f.write("\ncommit")
+        f.close()
+
 def save():
     f=filedialog.asksaveasfile(mode='wb', defaultextension='.grf', filetypes=[('grafi','*.grf')])
     if f:
@@ -580,6 +596,7 @@ filemenu=tk.Menu(menubar, tearoff=0)
 filemenu.add_command(label='Salva', command=save)
 filemenu.add_command(label='Carica', command=load)
 filemenu.add_command(label='Esporta json', command=exportJson)
+filemenu.add_command(label='Esporta GraQL', command=exportGraql)
 filemenu.add_command(label='Esci', command=window.destroy)
 menubar.add_cascade(label='File', menu=filemenu)
 menubar.add_command(label='Filtra', command=showFilter)
