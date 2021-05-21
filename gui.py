@@ -367,15 +367,14 @@ def updateCit(e):
 def exportJson():
     f=filedialog.asksaveasfile(mode='w', defaultextension='.json', filetypes=[('JSON','*.json')])
     if f:
-        f.reconfigure(encoding='utf-8')
-        pl=[]
-        cl=[]
-        for p in gc.getAllPapers():
-            pl.append(p.jsonDict())
-            for c in p.cites:
-                cl.append(c.jsonDict())
-        json.dump(pl+cl, f, ensure_ascii=False, indent=2)
-        f.close()
+        with f:
+            pl=[]
+            cl=[]
+            for p in gc.getAllPapers():
+                pl.append(p.jsonDict())
+                for c in p.cites:
+                    cl.append(c.jsonDict())
+            json.dump(pl+cl, f, indent=2)
 
 def exportGraql():
     f=filedialog.asksaveasfile(mode='w', defaultextension='.gql', filetypes=[('GraQL','*.gql')])
