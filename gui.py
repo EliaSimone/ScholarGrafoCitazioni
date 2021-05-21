@@ -5,6 +5,7 @@ from scholar_req import ScholarRequests
 import grafocitazioni as gc
 import webbrowser
 import json
+import os
 
 def mouseClick(e):
     #get pos relativa
@@ -203,7 +204,7 @@ def search():
             return
         gc.Paper.createUnique(paper_dict)
         drawAll()
-    except Exception:
+    except:
         messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def citedbyClick():
@@ -215,7 +216,7 @@ def citedbyClick():
         for c in cited:
             selected.addCite(gc.Paper.createUnique(c))
         drawAll()
-    except Exception:
+    except:
         messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def referencesClick():
@@ -227,7 +228,7 @@ def referencesClick():
         for c in cited:
             gc.Paper.createUnique(c).addCite(selected)
         drawAll()
-    except Exception:
+    except:
         messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def showInBrowser():
@@ -366,30 +367,48 @@ def updateCit(e):
 def exportJson():
     f=filedialog.asksaveasfile(mode='w', defaultextension='.json', filetypes=[('JSON','*.json')])
     if f:
+        f.reconfigure(encoding='utf-8')
         pl=[]
         cl=[]
         for p in gc.getAllPapers():
             pl.append(p.jsonDict())
             for c in p.cites:
                 cl.append(c.jsonDict())
-        json.dump(pl+cl, f, indent=2)
+        json.dump(pl+cl, f, ensure_ascii=False, indent=2)
         f.close()
 
 def exportGraql():
     f=filedialog.asksaveasfile(mode='w', defaultextension='.gql', filetypes=[('GraQL','*.gql')])
     if f:
-        for p in gc.getAllPapers():
-            f.write("insert $p isa paper, has title \"{}\", has year {}, has author \"{}\", has abstract \"{}\";\n".format(p.title,p.year,p.dict['author'],p.dict['abstract']))
-        f.write("\n")
-        for p in gc.getAllPapers():
-            for c in p.cites:
-                f.write("match\n")
-                f.write("$paper1 isa paper, has name \"{}\";\n".format(p.title))
-                f.write("$paper2 isa paper, has name \"{}\";\n".format(c.paper2.title))
-                f.write("insert $citation (citer: $paper1, cited: $paper2) isa citation;\n")
-                f.write("$citation has tag \"{}\";\n\n".format(c.tag))
-        f.write("\ncommit")
-        f.close()
+        with f:
+            f.reconfigure(encoding='utf-8')
+            for p in gc.getAllPapers():
+                f.write("insert $p isa paper, has title \"{}\", has year {}, has author \"{}\", has abstract \"{}\";\n".format(p.title,p.year,p.dict['author'],p.dict['abstract']))
+            f.write("\n")
+            for p in gc.getAllPapers():
+                for c in p.cites:
+                    f.write("match\n")
+                    f.write("$paper1 isa paper, has name \"{}\";\n".format(p.title))
+                    f.write("$paper2 isa paper, has name \"{}\";\n".format(c.paper2.title))
+                    f.write("insert $citation (citer: $paper1, cited: $paper2) isa citation;\n")
+                    f.write("$citation has tag \"{}\";\n\n".format(c.tag))
+            f.write("commit")
+
+        try:
+            f=open(os.path.dirname(f.name)+'\\schema.gql', 'x')
+            with f:
+                f.write("define\n\n")
+                f.write("paper sub entity,\n\towns title,\n\towns year,\n\towns author,\n\towns abstract,\n\tplays citation:citer,\n\tplays citation:cited;\n\n")
+                f.write("citation sub relation,\n\towns tag,\n\trelates citer,\n\trelates cited;\n\n")
+                f.write("title sub attribute,\n\tvalue string;\n\n")
+                f.write("year sub attribute,\n\tvalue long;\n\n")
+                f.write("author sub attribute,\n\tvalue string;\n\n")
+                f.write("abstract sub attribute,\n\tvalue string;\n\n")
+                f.write("tag sub attribute,\n\tvalue string;\n")
+        except FileExistsError:
+            messagebox.showwarning('Schema.gql non salvato','Esiste già un file schema.qgl')
+        except:
+            messagebox.showerror('Errore','Schema.gql non salvato')
 
 def save():
     f=filedialog.asksaveasfile(mode='wb', defaultextension='.grf', filetypes=[('grafi','*.grf')])
@@ -397,7 +416,7 @@ def save():
         try:
             gc.save(f)
         except:
-            print('not possible to save')
+            messagebox.showerror('Errore','Impossibile salvare')
         f.close()
 
 def load():
@@ -406,7 +425,7 @@ def load():
         try:
             gc.load(f)
         except Exception as e:
-            print('not possible to load:', e)
+            messagebox.showerror('Errore','Impossibile caricare:\n'+str(e))
         f.close()
     selected=None
     hover=None
