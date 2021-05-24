@@ -24,9 +24,13 @@ class Paper:
         self.title=paperDict['title']
         self.year=int(paperDict['pub_year'])
         self.cites=set()
-        self.pdf=None
+        self.pdf=""
         self.draw=True
         self.hide=False
+
+        self.vtitle=self.title
+        if len(self.vtitle)>50:
+            self.vtitle=self.vtitle[:50]+'...'
 
         if self.title in _papers:
             return

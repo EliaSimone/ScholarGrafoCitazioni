@@ -20,9 +20,12 @@ def mouseClick(e):
         l_title['text']='Titolo: '+selected.title
         l_author['text']='Autori: '+selected.dict['author']
         l_year['text']='Anno: '+selected.dict['pub_year']
-        l_abstr['text']='Abstract: '+selected.dict['abstract']
+        if selected.dict['abstract']=="":
+            l_abstr['text']=""
+        else:
+            l_abstr['text']='Abstract: '+selected.dict['abstract']
         b_hide['text']='Mostra citazioni' if selected.hide else 'Nascondi citazioni'
-        if selected.pdf:
+        if selected.pdf!="":
             e_pdf.config(state='active')
             e_pdf.delete(0, tk.END)
             e_pdf.insert(0, selected.pdf)
@@ -39,7 +42,6 @@ def mouseClick(e):
         for p in gc.getAllPapers():
             for c in p.cites:
                 if (c.checkPoint(x,y) and c.draw):
-                    print('ho cliccato su un arco')
                     selected=c
                     cb_tag.set('<vuoto>' if c.tag=='' else c.tag)
                     cb_colors.current(colors.index(c.color))
@@ -76,7 +78,8 @@ def mouseMove(e):
                     text=p.title
                     text+='\nauthors: '+p.dict['author']
                     text+='\nyear: '+p.dict['pub_year']
-                    text+='\nabstract: '+p.dict['abstract']
+                    if p.dict['abstract']!="":
+                        text+='\nabstract: '+p.dict['abstract']
                     tooltip['text']=text
                 break
         else:
@@ -147,7 +150,7 @@ def drawPapers():
                 cs.create_oval(p.x, p.y, p.x+gc.Paper.WIDTH, p.y+gc.Paper.HEIGHT, width=1, fill='#FD1', tag='grafo')
             else:
                 cs.create_oval(p.x, p.y, p.x+gc.Paper.WIDTH, p.y+gc.Paper.HEIGHT, fill='#46B', tag='grafo')
-            cs.create_text(p.x+gc.Paper.WIDTH/2, p.y+gc.Paper.HEIGHT+12, text=p.title, font="Tahoma 9", tag='grafo')
+            cs.create_text(p.x+gc.Paper.WIDTH/2, p.y+gc.Paper.HEIGHT+12, text=p.vtitle, font="Tahoma 9", tag='grafo')
 
 def drawGrid(scrollregion):
     x = scrollregion[0]
