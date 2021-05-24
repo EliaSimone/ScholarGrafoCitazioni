@@ -184,7 +184,7 @@ def setScrollRegion():
     cw=cs.winfo_width()-4
     ch=cs.winfo_height()-4
     if w<cw:
-        x=int(x-(cw-w)/2)
+        x=int(x-(cw-w))
         w=cw
     if h<ch:
         y=int(y-(ch-h)/2)
