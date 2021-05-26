@@ -12,7 +12,7 @@ _maxYear=None
 
 Y_MAX=600
 Y_SPAWN=450
-XSEP=35
+XSEP=60
 
 class Paper:
     """crea un paper da un dizionario formato scholarly"""
@@ -129,7 +129,7 @@ class Citation:
         self.tag=tag
         self.color='black'
         self.draw=True
-        if paper2.year>paper1.year:
+        if paper2.year>=paper1.year:
             self.right=True
         else:
             self.right=False

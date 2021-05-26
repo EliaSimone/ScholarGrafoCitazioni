@@ -100,7 +100,7 @@ def mouseRelease(e):
 
 def mouseWheel(e):
     xv=cs.xview()
-    gc.XSEP+=int(e.delta/20)
+    gc.XSEP+=int(e.delta/12)
     if gc.XSEP<20:
         gc.XSEP=20
     elif gc.XSEP>250:
@@ -111,7 +111,7 @@ def mouseWheel(e):
 
 def zoomIn():
     xv=cs.xview()
-    gc.XSEP+=6
+    gc.XSEP+=10
     if gc.XSEP<20:
         gc.XSEP=20
     elif gc.XSEP>250:
@@ -121,7 +121,7 @@ def zoomIn():
 
 def zoomOut():
     xv=cs.xview()
-    gc.XSEP-=6
+    gc.XSEP-=10
     if gc.XSEP<20:
         gc.XSEP=20
     elif gc.XSEP>250:
@@ -245,21 +245,6 @@ def toogle_hide():
         selected.hide=True
         b_hide['text']='Mostra citazioni'
     lastFilter()
-    """
-    draw_set=set()
-    exclude_set=set()
-    for p in gc.getAllPapers():
-        for c in p.cites:
-            if p.hide:
-                c.draw=False
-                exclude_set.add(c.paper2)
-            elif c.paper2.draw:
-                draw_set.add(c.paper2)
-    for p in exclude_set:
-        if p not in draw_set:
-            p.draw=False
-    drawAll()
-    """
 
 def showFilter():
     global selected
@@ -470,16 +455,6 @@ cs.bind('<Motion>', mouseMove)
 cs.bind('<Leave>', mouseLeave)
 cs.bind('<Configure>', onSizeChanged)
 cs.bind('<MouseWheel>', mouseWheel)
-
-"""DEBUG"""
-
-def test(e):
-    print('sel:', selected)
-    print('hov:', hover)
-    
-window.bind('<KeyPress>', test)
-
-"""DEBUG"""
 
 scrollbar = tk.Scrollbar(window, orient='horizontal', command=cs.xview)
 scrollbar.grid(column=0, row=2, columnspan=4, sticky=tk.EW)
