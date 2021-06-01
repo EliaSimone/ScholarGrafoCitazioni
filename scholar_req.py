@@ -1,6 +1,8 @@
 import helium
+from selenium.webdriver import Chrome
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import WebDriverException
 
 _IMPLICIT_WAIT=12
 
@@ -8,17 +10,26 @@ class ScholarRequests:
     """gestisce le richieste a semantic scholar"""
     
     def __init__(self):
-        op = Options()
+        op=Options()
         #op.add_argument('--disable-gpu')
         op.add_argument('--no-sandbox')
         op.add_argument('disable-infobars')
         op.add_argument("--disable-extensions")
+        op.add_argument("--headless")
+
+        path=ChromeDriverManager().install()
+        self._chrm=Chrome(path, options=op)
+        helium.set_driver(self._chrm)
+
+        """
         try:
             self._chrm=helium.start_chrome(headless=True, options=op)
         except Exception:
-            path=ChromeDriverManager.install()
-            op.binary_location=path
-            self._chrm=helium.start_chrome(headless=True, options=op)
+            path=ChromeDriverManager(cache_valid_range=0).install()
+            print(path)
+            self._chrm=Chrome(path, chrome_options=op)
+            helium.set_driver(self._chrm)
+        """
 
     def search_single_pub(self, query):
         """restituisce il primo paper dalla ricerca"""
