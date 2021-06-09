@@ -24,6 +24,7 @@ class Paper:
         self.title=paperDict['title']
         self.year=int(paperDict['pub_year'])
         self.cites=set()
+        self.citesBack=set()
         self.pdf=""
         self.draw=True
         self.hide=False
@@ -69,11 +70,22 @@ class Paper:
         for c in self.cites:
             if paper is c.paper2:
                 return
-        self.cites.add(Citation(self, paper, tag))
+        cit=Citation(self, paper, tag)
+        self.cites.add(cit)
+        paper.citesBack.add(cit)
 
     def clearCites(self):
         """svuota lista citazioni"""
+        for c in self.cites:
+            c.paper2.citesBack.remove(c)
         self.cites.clear()
+
+    def delete(self):
+        """safe delete"""
+        self.clearCites()
+        for c in self.citesBack:
+            c.paper1.cites.remove(c)
+        _papers.pop(self.title)
 
     def checkPoint(self, x, y):
         if x<self.x:
@@ -128,6 +140,7 @@ class Citation:
         self.paper2=paper2
         self.tag=tag
         self.color='black'
+        self.width=1
         self.draw=True
         if paper2.year>=paper1.year:
             self.right=True
@@ -163,6 +176,7 @@ class Citation:
         return math.degrees(-a)
 
     def checkPoint(self, x, y, stroke=5):
+        stroke+=self.width-1
         if (x<self.x1) == (x<self.x2):
             return False
         if (y<self.y1) == (y<self.y2):
@@ -199,6 +213,18 @@ def save(filename):
 def load(filename):
     global _papers, _minX, _maxX, _minYear, _maxYear
     load=pickle.load(filename)
+    _papers=load[0]
+    _minX=load[1]
+    _maxX=load[2]
+    _minYear=load[3]
+    _maxYear=load[4]
+
+def saveString():
+    return pickle.dumps((_papers,_minX,_maxX,_minYear,_maxYear))
+
+def loadString(s):
+    global _papers, _minX, _maxX, _minYear, _maxYear
+    load=pickle.loads(s)
     _papers=load[0]
     _minX=load[1]
     _maxX=load[2]
