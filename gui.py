@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog, messagebox
 from scholar_req import ScholarRequests
+from statebuffer import StBuffer
 import grafocitazioni as gc
 import webbrowser
 import json
@@ -45,6 +46,7 @@ def mouseClick(e):
                     selected=c
                     cb_tag.set('<vuoto>' if c.tag=='' else c.tag)
                     cb_colors.current(colors.index(c.color))
+                    cs_width.set(c.width)
                     citFrame.tkraise()
                     updateTagSample()
                     break
@@ -132,7 +134,6 @@ def zoomOut():
 def onSizeChanged(e):
     sr=setScrollRegion()
     drawGrid(sr)
-    cs.tag_lower('grid')
 
 def drawPapers():
     cs.delete('grafo')
@@ -142,12 +143,12 @@ def drawPapers():
             for c in p.cites:
                 if c.draw:
                     if selected is c:
-                        cs.create_line(c.x1, c.y1, c.x2, c.y2, width=2, arrow=tk.LAST, fill=c.color, tag='grafo')
+                        cs.create_line(c.x1, c.y1, c.x2, c.y2, width=c.width+1, arrow=tk.LAST, fill=c.color, tag='grafo')
                     else:
-                        cs.create_line(c.x1, c.y1, c.x2, c.y2, arrow=tk.LAST, fill=c.color, tag='grafo')
+                        cs.create_line(c.x1, c.y1, c.x2, c.y2, width=c.width, arrow=tk.LAST, fill=c.color, tag='grafo')
                     cs.create_text((c.x1+c.x2)/2, (c.y1+c.y2)/2, text=c.tag, angle=c.textAngle, anchor='s', tag='grafo')
             if selected is p:
-                cs.create_oval(p.x, p.y, p.x+gc.Paper.WIDTH, p.y+gc.Paper.HEIGHT, width=1, fill='#FD1', tag='grafo')
+                cs.create_oval(p.x, p.y, p.x+gc.Paper.WIDTH, p.y+gc.Paper.HEIGHT, fill='#FD1', tag='grafo')
             else:
                 cs.create_oval(p.x, p.y, p.x+gc.Paper.WIDTH, p.y+gc.Paper.HEIGHT, fill='#46B', tag='grafo')
             cs.create_text(p.x+gc.Paper.WIDTH/2, p.y+gc.Paper.HEIGHT+12, text=p.vtitle, font="Tahoma 9", tag='grafo')
@@ -165,12 +166,12 @@ def drawGrid(scrollregion):
         for i in range(int(x/gc.XSEP)*gc.XSEP, xw, gc.XSEP*2):
             year=(i-gc.minX())/gc.XSEP+gc.minYear()
             cs.create_text(i, cs.canvasy(cs.winfo_height()-50), text=f'{year:.0f}', tag='grid')
+    cs.tag_lower('grid')
 
 def drawAll():
     drawPapers()
     sr=setScrollRegion()
     drawGrid(sr)
-    cs.tag_lower('grid')
     
 def setScrollRegion():
     """set scrollregion in modo da centrare il grafo, return new scrollregion"""
@@ -197,7 +198,6 @@ def yscroll(a,y):
     cs.yview(a,y)
     sr=setScrollRegion()
     drawGrid(sr)
-    cs.tag_lower('grid')
     
 def search():
     try:
@@ -207,6 +207,7 @@ def search():
             return
         gc.Paper.createUnique(paper_dict)
         drawAll()
+        buff.push(gc.saveString())
     except:
         messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
@@ -219,6 +220,7 @@ def citedbyClick():
         for c in cited:
             selected.addCite(gc.Paper.createUnique(c))
         drawAll()
+        buff.push(gc.saveString())
     except:
         messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
@@ -231,11 +233,19 @@ def referencesClick():
         for c in cited:
             gc.Paper.createUnique(c).addCite(selected)
         drawAll()
+        buff.push(gc.saveString())
     except:
         messagebox.showerror('Errore','Impossibile eseguire la ricerca')
 
 def showInBrowser():
     webbrowser.open(selected.dict['link'])
+
+def deletePaper():
+    selected.delete()
+    showFilter()
+    sr=setScrollRegion()
+    drawGrid(sr)
+    buff.push(gc.saveString())
 
 def toogle_hide():
     if selected.hide:
@@ -350,6 +360,7 @@ def updateCit(e):
     
     selected.tag=tag if tag!='<vuoto>' else ""
     selected.color=color
+    selected.width=round(cs_width.get())
     drawAll()
 
 def exportJson():
@@ -407,10 +418,13 @@ def save():
         f.close()
 
 def load():
+    global selected, hover, clicked
     f=filedialog.askopenfile(mode='rb', filetypes=[('grafi','*.grf')])
     if f:
         try:
             gc.load(f)
+            buff.clear()
+            buff.push(gc.saveString())
         except Exception as e:
             messagebox.showerror('Errore','Impossibile caricare:\n'+str(e))
         f.close()
@@ -420,6 +434,27 @@ def load():
     drawAll()
     updateTagSample()
 
+def undo(e=None):
+    global selected, hover, clicked
+    s=buff.back()
+    if s:
+        gc.loadString(s)
+        selected=None
+        hover=None
+        clicked=False
+        drawAll()
+
+def redo(e=None):
+    global selected, hover, clicked
+    s=buff.forward()
+    if s:
+        gc.loadString(s)
+        selected=None
+        hover=None
+        clicked=False
+        drawAll()
+
+"""variabili globali"""
 #Paper col mouse sopra
 hover=None
 selected=None
@@ -428,12 +463,16 @@ clicked=False
 lastFilter=clearFilter
 
 sch=ScholarRequests()
+buff=StBuffer()
+"""variabili globali"""
 
 #window gui    
 window = tk.Tk()
 window.geometry("800x600")
 window.title("Scholar")
 window.minsize(550,280)
+window.bind('<Control-z>', undo)
+window.bind('<Control-y>', redo)
 
 tk.Grid.columnconfigure(window, 1, weight=1)
 tk.Grid.rowconfigure(window, 1, weight=1)
@@ -444,8 +483,10 @@ search_e.grid(column=0, row=0, padx=5, pady=5, sticky=tk.E)
 search_b=ttk.Button(window,text="Cerca",command=search)
 search_b.grid(column=1, row=0, padx=5, pady=5, sticky=tk.W)
 
-ttk.Button(window,text="Zoom +",command=zoomIn).grid(column=2, row=0, padx=5, pady=5)
-ttk.Button(window,text="Zoom -",command=zoomOut).grid(column=3, row=0, padx=5, pady=5)
+im_zoom=tk.PhotoImage(file='zoom1.png')
+im_zoom2=tk.PhotoImage(file='zoom2.png')
+ttk.Button(window, image=im_zoom, command=zoomIn).grid(column=2, row=0, padx=5, pady=5, ipadx=2)
+ttk.Button(window, image=im_zoom2, command=zoomOut).grid(column=3, row=0, padx=5, pady=5, ipadx=2)
 
 cs=tk.Canvas(window, bg='white', borderwidth=2, relief='ridge', highlightthickness=0)
 cs.grid(column=0, row=1, columnspan=4, sticky=tk.NSEW)
@@ -509,6 +550,7 @@ b_pdf=ttk.Button(paperFrame, text='Apri', command=openPdf)
 b_pdf.grid(column=1, row=8, sticky=tk.EW, padx=5, pady=5)
 
 ttk.Button(paperFrame, text='Apri online', command=showInBrowser).grid(column=0, row=10, sticky=tk.EW, padx=10, pady=5)
+ttk.Button(paperFrame, text='Elimina', command=deletePaper).grid(column=1, row=10, sticky=tk.EW, padx=10, pady=5)
 ttk.Button(paperFrame, text='Citato da', command=citedbyClick).grid(column=0, row=11, sticky=tk.EW, padx=10, pady=5)
 ttk.Button(paperFrame, text='Cita', command=referencesClick).grid(column=1, row=11, sticky=tk.EW, padx=10, pady=5)
 
@@ -530,7 +572,12 @@ colors=['black','blue','red','green','yellow']
 tk.Label(citFrame, text='colore:').grid(column=0, row=2, pady=5)
 cb_colors=ttk.Combobox(citFrame, state='readonly', values=['nero','blu','rosso','verde','giallo'])
 cb_colors.grid(column=1, columnspan=2, row=2, pady=5)
+        
+tk.Label(citFrame, text='spessore:').grid(column=0, row=3, pady=5)
+cs_width=ttk.Scale(citFrame, from_=1, to=5, command=updateCit, orient=tk.HORIZONTAL)
+cs_width.grid(column=1, columnspan=2, row=3, pady=5)
 
+"""
 def addTag():
     elem=tag_entry.get()
     if elem!="" and elem not in cb_tag['values']:
@@ -538,9 +585,10 @@ def addTag():
         cb_filter['values']+=(elem,)
         tag_entry.delete(0,tk.END)
 
-#tag_entry=ttk.Entry(citFrame)
-#tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)
-#ttk.Button(citFrame, text='aggiungi', command=addTag).grid(column=2, row=3, padx=5, pady=5)
+tag_entry=ttk.Entry(citFrame)
+tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)
+ttk.Button(citFrame, text='aggiungi', command=addTag).grid(column=2, row=3, padx=5, pady=5)
+"""
 
 cb_tag.bind("<<ComboboxSelected>>", updateCit)
 cb_colors.bind("<<ComboboxSelected>>", updateCit)
@@ -584,8 +632,6 @@ ttk.Button(filtrFrame, text='Limit to', command=filterLimitTo).grid(column=0, ro
 ttk.Button(filtrFrame, text='Exclude', command=filterExclude).grid(column=1, columnspan=2, row=6, sticky=tk.EW, padx=5, pady=5)
 ttk.Button(filtrFrame, text='Remove Filter', command=clearFilter).grid(column=0, columnspan=3, row=7, sticky=tk.EW, padx=5, pady=5)
 
-#paperFrame.tkraise()
-
 #menubar
 menubar=tk.Menu(window)
 filemenu=tk.Menu(menubar, tearoff=0)
@@ -594,11 +640,17 @@ filemenu.add_command(label='Carica', command=load)
 filemenu.add_command(label='Esporta json', command=exportJson)
 filemenu.add_command(label='Esporta GraQL', command=exportGraql)
 filemenu.add_command(label='Esci', command=window.destroy)
+editmenu=tk.Menu(menubar, tearoff=0)
+editmenu.add_command(label='Annulla', command=undo)
+editmenu.add_command(label='Ripeti', command=redo)
 menubar.add_cascade(label='File', menu=filemenu)
+menubar.add_cascade(label='Modifica', menu=editmenu)
 menubar.add_command(label='Filtra', command=showFilter)
-window['menu']=menubar
+window.config(menu=menubar)
 
 tooltip=tk.Label(window, anchor=tk.NW, borderwidth=1, relief='solid', justify=tk.LEFT, wraplengt=250)
+
+buff.push(gc.saveString())
 
 tk.mainloop()
 sch.exit()

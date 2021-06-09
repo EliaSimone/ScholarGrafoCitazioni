@@ -2,7 +2,7 @@ import helium
 from selenium.webdriver import Chrome
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import WebDriverException
+#from selenium.common.exceptions import WebDriverException
 
 _IMPLICIT_WAIT=12
 
