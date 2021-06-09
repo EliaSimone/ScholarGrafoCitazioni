@@ -434,7 +434,7 @@ def load():
     drawAll()
     updateTagSample()
 
-def undo(e=None):
+def undo():
     global selected, hover, clicked
     s=buff.back()
     if s:
@@ -444,7 +444,7 @@ def undo(e=None):
         clicked=False
         drawAll()
 
-def redo(e=None):
+def redo():
     global selected, hover, clicked
     s=buff.forward()
     if s:
@@ -471,8 +471,10 @@ window = tk.Tk()
 window.geometry("800x600")
 window.title("Scholar")
 window.minsize(550,280)
-window.bind('<Control-z>', undo)
-window.bind('<Control-y>', redo)
+window.bind('<Control-z>', lambda e: undo())
+window.bind('<Control-y>', lambda e: redo())
+window.bind('<Control-s>', lambda e: save())
+window.bind('<Control-l>', lambda e: load())
 
 tk.Grid.columnconfigure(window, 1, weight=1)
 tk.Grid.rowconfigure(window, 1, weight=1)
@@ -635,14 +637,14 @@ ttk.Button(filtrFrame, text='Remove Filter', command=clearFilter).grid(column=0,
 #menubar
 menubar=tk.Menu(window)
 filemenu=tk.Menu(menubar, tearoff=0)
-filemenu.add_command(label='Salva', command=save)
-filemenu.add_command(label='Carica', command=load)
+filemenu.add_command(label='Salva', accelerator='Ctrl+S', command=save)
+filemenu.add_command(label='Carica', accelerator='Ctrl+L', command=load)
 filemenu.add_command(label='Esporta json', command=exportJson)
 filemenu.add_command(label='Esporta GraQL', command=exportGraql)
 filemenu.add_command(label='Esci', command=window.destroy)
 editmenu=tk.Menu(menubar, tearoff=0)
-editmenu.add_command(label='Annulla', command=undo)
-editmenu.add_command(label='Ripeti', command=redo)
+editmenu.add_command(label='Annulla', accelerator='Ctrl+Z', command=undo)
+editmenu.add_command(label='Ripeti', accelerator='Ctrl+Y', command=redo)
 menubar.add_cascade(label='File', menu=filemenu)
 menubar.add_cascade(label='Modifica', menu=editmenu)
 menubar.add_command(label='Filtra', command=showFilter)
