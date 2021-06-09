@@ -65,7 +65,7 @@ class Paper:
             return Paper(paperDict)
         return _papers[title]
 
-    def addCite(self, paper, tag=''):
+    def addCite(self, paper, tag=""):
         """aggiunge citazione con tag e riferimento al paper"""
         for c in self.cites:
             if paper is c.paper2:
@@ -135,7 +135,7 @@ def maxYear():
 
 class Citation:
     """classe che rappresenta ogni citazione, con tag, papers e coordinate"""
-    def __init__(self, paper1, paper2, tag=''):
+    def __init__(self, paper1, paper2, tag=""):
         self.paper1=paper1
         self.paper2=paper2
         self.tag=tag

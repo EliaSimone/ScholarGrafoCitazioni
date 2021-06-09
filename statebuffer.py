@@ -20,6 +20,11 @@ class StBuffer:
         self._pos+=1
         return self._l[self._pos]
 
+    def current(self):
+        if self._pos>-1:
+            return self._l[self._pos]
+        return None
+
     def clear(self):
         self._l=[]
         self._pos=-1

@@ -44,7 +44,7 @@ def mouseClick(e):
             for c in p.cites:
                 if (c.checkPoint(x,y) and c.draw):
                     selected=c
-                    cb_tag.set('<vuoto>' if c.tag=='' else c.tag)
+                    cb_tag.set('<vuoto>' if c.tag=="" else c.tag)
                     cb_colors.current(colors.index(c.color))
                     cs_width.set(c.width)
                     citFrame.tkraise()
@@ -54,7 +54,14 @@ def mouseClick(e):
                 continue
             break
     drawAll()
+    window.focus_set()
     tooltip.tkraise()
+
+def globalClick(e):
+    global archOpzChange
+    if archOpzChange:
+        buff.push(gc.saveString())
+        archOpzChange=False
 
 def mouseMove(e):
     #get pos relativa
@@ -261,6 +268,7 @@ def showFilter():
     selected=None
     drawPapers()
     filtrFrame.tkraise()
+    window.focus_set()
     tooltip.tkraise()
     updateTagSample()
 
@@ -355,12 +363,21 @@ def updateTagSample():
     cb_filter['values']=preset+tuple(sample)
             
 def updateCit(e):
+    global archOpzChange
     tag=cb_tag.get()
+    tag=tag if tag!='<vuoto>' else ""
     color=colors[cb_colors.current()]
-    
-    selected.tag=tag if tag!='<vuoto>' else ""
-    selected.color=color
-    selected.width=round(cs_width.get())
+    width=round(cs_width.get())
+
+    if selected.tag!=tag:
+        selected.tag=tag
+        archOpzChange=True
+    if selected.color!=color:
+        selected.color=color
+        buff.push(gc.saveString())
+    if selected.width!=width:
+        selected.width=width
+        buff.push(gc.saveString())
     drawAll()
 
 def exportJson():
@@ -418,7 +435,7 @@ def save():
         f.close()
 
 def load():
-    global selected, hover, clicked
+    global selected, hover, clicked, lastFilter, archOpzChange
     f=filedialog.askopenfile(mode='rb', filetypes=[('grafi','*.grf')])
     if f:
         try:
@@ -431,28 +448,36 @@ def load():
     selected=None
     hover=None
     clicked=False
+    lastFilter=clearFilter
+    archOpzChange=False
     drawAll()
     updateTagSample()
 
 def undo():
-    global selected, hover, clicked
+    global selected, hover, clicked, archOpzChange
     s=buff.back()
     if s:
         gc.loadString(s)
         selected=None
         hover=None
         clicked=False
-        drawAll()
+        archOpzChange=False
+        showFilter()
+        sr=setScrollRegion()
+        drawGrid(sr)
 
 def redo():
-    global selected, hover, clicked
+    global selected, hover, clicked, archOpzChange
     s=buff.forward()
     if s:
         gc.loadString(s)
         selected=None
         hover=None
         clicked=False
-        drawAll()
+        archOpzChange=False
+        showFilter()
+        sr=setScrollRegion()
+        drawGrid(sr)
 
 """variabili globali"""
 #Paper col mouse sopra
@@ -461,6 +486,7 @@ selected=None
 
 clicked=False
 lastFilter=clearFilter
+archOpzChange=False
 
 sch=ScholarRequests()
 buff=StBuffer()
@@ -475,6 +501,22 @@ window.bind('<Control-z>', lambda e: undo())
 window.bind('<Control-y>', lambda e: redo())
 window.bind('<Control-s>', lambda e: save())
 window.bind('<Control-l>', lambda e: load())
+window.bind('<Button-1>', globalClick)
+
+"""DEBUG"""
+saved=''
+def ciao(e):
+    global saved
+    st=gc.saveString()
+    if st==saved:
+        print('UGUALE')
+    else:
+        print('DIVERSO')
+    saved=st
+
+window.bind('<space>', ciao)
+
+"""DEBUG"""
 
 tk.Grid.columnconfigure(window, 1, weight=1)
 tk.Grid.rowconfigure(window, 1, weight=1)
@@ -578,19 +620,6 @@ cb_colors.grid(column=1, columnspan=2, row=2, pady=5)
 tk.Label(citFrame, text='spessore:').grid(column=0, row=3, pady=5)
 cs_width=ttk.Scale(citFrame, from_=1, to=5, command=updateCit, orient=tk.HORIZONTAL)
 cs_width.grid(column=1, columnspan=2, row=3, pady=5)
-
-"""
-def addTag():
-    elem=tag_entry.get()
-    if elem!="" and elem not in cb_tag['values']:
-        cb_tag['values']+=(elem,)
-        cb_filter['values']+=(elem,)
-        tag_entry.delete(0,tk.END)
-
-tag_entry=ttk.Entry(citFrame)
-tag_entry.grid(column=0, columnspan=2, row=3, padx=5, pady=5)
-ttk.Button(citFrame, text='aggiungi', command=addTag).grid(column=2, row=3, padx=5, pady=5)
-"""
 
 cb_tag.bind("<<ComboboxSelected>>", updateCit)
 cb_colors.bind("<<ComboboxSelected>>", updateCit)
